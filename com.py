@@ -18,13 +18,18 @@ def push_to_log(log_obj, message):
 
 
 def read_port(event):
+    pb['value'] = 0
     port = PORTS_DIR + port_name.get()
     baudrate = int(speed.get())
     # timeout_time = float(timeout.get())
 
+    pb['value'] = 5
+
     s = serial.Serial(port, baudrate=baudrate, timeout=0.1)
     s.flushInput()  # почистим буфер
     push_to_log(log, 'порт готов')
+
+    pb['value'] = 10
 
     while True:
         k = s.readline()
@@ -32,9 +37,13 @@ def read_port(event):
             break
     time.sleep(1)
 
+    pb['value'] = 20
+
     file_name = s.readline().strip()
     print file_name, '<---- name of file'
     push_to_log(log, 'имя принятого файла: %s' % file_name)
+
+    pb['value'] = 30
 
     # time.sleep(1)
     file_size = s.readline().strip()
@@ -42,6 +51,7 @@ def read_port(event):
     push_to_log(log, 'размер принятого файла: %s bites' % file_size)
     # time.sleep(1)
 
+    pb['value'] = 40
     # content = ''.join(s.readlines())
     data = []
     while s.inWaiting():
@@ -49,42 +59,56 @@ def read_port(event):
     content = ''.join(data)
     push_to_log(log, 'передача окончена')
 
-    print os.path.join('folder', file_name)
+    pb['value'] = 75
 
     output_file = open(os.path.join('folder', file_name), 'w')
     output_file.write(content)
     output_file.close()
     push_to_log(log, 'данные записаны в файл')
 
+    pb['value'] = 95
     s.close()  # закрываем за собой КОМ-порт
+    pb['value'] = 100
 
 
 def send_file_via_port(event):
+    pb['value'] = 0
+
     port = PORTS_DIR + port_name.get()
     baudrate = int(speed.get())
     # timeout_time = float(timeout.get())
 
+    pb['value'] = 10
+
     s = serial.Serial(port, baudrate=baudrate)
     s.flushOutput()  # почистим буфер
 
+    pb['value'] = 20
+
     path_to_file = askopenfilename()
-    print path_to_file
     with open(path_to_file) as input_file:
         full_file_name = input_file.name
         file_size = os.path.getsize(path_to_file)
         content = input_file.read()
 
+    pb['value'] = 40
+
     push_to_log(log, 'Начало передачи')
     s.write('<<START>>')
     time.sleep(1)
 
-    push_to_log(log, 'отправка имени...')
-    s.write(full_file_name.split('/')[-1] + '\n')
+    pb['value'] = 55
+
+    short_name = full_file_name.split('/')[-1]
+    push_to_log(log, 'отправка имени(%s)' % short_name)
+    s.write(short_name + '\n')
     # time.sleep(1)
 
-    push_to_log(log, 'отправка размера файла ...')
+    push_to_log(log, 'отправка размера файла(%d bites)' % file_size)
     s.write(str(file_size) + '\n')
     # time.sleep(1)
+
+    pb['value'] = 65
 
     push_to_log(log, 'передача содержания файла...')
     # s.write(content)
@@ -92,7 +116,11 @@ def send_file_via_port(event):
         s.write(byte)
     push_to_log(log, 'передача окончена')
 
+    pb['value'] = 95
+
     s.close()  # закрываем за собой КОМ-порт
+
+    pb['value'] = 100
 
 
 root = Tk()
@@ -131,9 +159,9 @@ speed.pack(side=RIGHT, expand=YES, fill=X)
 # timeout_label = Label(row3, width=15, text='Таймаут чтения:')
 # timeout = Combobox(row3, values=TIMEOUTS, height=4)
 # try:
-#     timeout.set(TIMEOUTS[0])
+# timeout.set(TIMEOUTS[0])
 # except IndexError:
-#     timeout.set(0.5)
+# timeout.set(0.5)
 #
 # row3.pack(side=TOP, fill=X)
 # timeout_label.pack(side=LEFT)
@@ -155,5 +183,11 @@ lab4 = Label(root, text='Лог процесса')
 lab4.pack()
 log = Listbox()
 log.pack(fill=X)
+
+# define progress bar
+pb = Progressbar(root, orient="horizontal", length=40, mode="determinate")
+pb['value'] = 0
+pb['maximum'] = 100
+pb.pack(fill=X)
 
 root.mainloop()
